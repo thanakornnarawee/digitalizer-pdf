@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แยกไฟล์ตามชื่อพนักงาน</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #F5F4EF;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #1a1a1a;
+        }
+        .container {
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 560px;
+            width: 100%;
+            border: 1px solid #E5E4DF;
+        }
+        h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px 0; }
+        .subtitle { color: #666; font-size: 14px; margin: 0 0 28px 0; }
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #F0F7F0;
+            color: #1E6F1E;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+            border: 1px solid #C8E6C8;
+        }
+        .security-badge svg { width: 14px; height: 14px; }
+        .upload-area {
+            border: 1.5px dashed #D1D0CB;
+            border-radius: 8px;
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-bottom: 16px;
+            background: #FAFAF8;
+        }
+        .upload-area:hover, .upload-area.dragover { border-color: #B4876E; background: #FDF9F7; }
+        .upload-area.has-file { border-color: #B4876E; border-style: solid; background: #FDF9F7; }
+        .upload-icon { width: 40px; height: 40px; margin: 0 auto 12px; opacity: 0.5; }
+        .upload-text { font-size: 14px; color: #666; margin: 0; }
+        .upload-text strong { color: #B4876E; cursor: pointer; }
+        input[type="file"] { display: none; }
+        .file-name { font-size: 14px; color: #B4876E; font-weight: 500; margin-top: 12px; }
+        .btn {
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.15s ease;
+            margin-bottom: 8px;
+        }
+        .btn:hover { background: #333; }
+        .btn:disabled { background: #E5E4DF; color: #999; cursor: not-allowed; }
+        .btn-secondary { background: #FFFFFF; color: #1a1a1a; border: 1px solid #E5E4DF; }
+        .btn-secondary:hover { background: #F5F4EF; }
+        .btn-secondary:disabled { background: #FAFAF8; color: #bbb; }
+        .status {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        .status.success { background: #F0F7F0; color: #1E6F1E; border: 1px solid #C8E6C8; display: block; }
+        .status.error { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; display: block; }
+        .status.info { background: #FDF9F7; color: #92643D; border: 1px solid #E8D5C8; display: block; }
+        .results { margin-top: 20px; }
+        .results h3 { font-size: 14px; font-weight: 600; margin: 0 0 12px 0; }
+        .results ul { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+        .results li {
+            padding: 10px 12px;
+            background: #FAFAF8;
+            margin: 4px 0;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #444;
+            border: 1px solid #E5E4DF;
+        }
+        .progress { margin-top: 16px; display: none; }
+        .progress.show { display: block; }
+        .progress-bar { height: 4px; background: #E5E4DF; border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #B4876E; width: 0%; transition: width 0.3s ease; }
+        .progress-text { font-size: 13px; color: #666; margin-top: 8px; }
+        .divider { border: none; border-top: 1px solid #E5E4DF; margin: 24px 0; }
+        .section h3 { font-size: 14px; font-weight: 600; margin: 0 0 12px 0; }
+        .help-text { font-size: 12px; color: #888; margin-top: 8px; line-height: 1.5; }
+        .input-field {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 14px;
+            border: 1px solid #E5E4DF;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        .input-field:focus { outline: none; border-color: #B4876E; }
+        .input-field::placeholder { color: #999; }
+
+        /* Email mapping styles */
+        .email-mapping { margin-top: 16px; }
+        .email-mapping-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .email-mapping-header h4 { margin: 0; font-size: 14px; }
+        .email-mapping-count { font-size: 12px; color: #666; }
+        .email-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #E5E4DF;
+            border-radius: 8px;
+        }
+        .email-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid #E5E4DF;
+            gap: 12px;
+        }
+        .email-row:last-child { border-bottom: none; }
+        .email-row-name {
+            flex: 0 0 140px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .email-row-input {
+            flex: 1;
+            padding: 8px 10px;
+            font-size: 13px;
+            border: 1px solid #E5E4DF;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+        .email-row-input:focus { outline: none; border-color: #B4876E; }
+        .email-row-input.has-value { border-color: #C8E6C8; background: #F8FDF8; }
+        .email-row-status { flex: 0 0 20px; font-size: 14px; }
+
+        .link-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #FAFAF8;
+            border-radius: 8px;
+            border: 1px solid #E5E4DF;
+            margin-bottom: 16px;
+        }
+        .link-row svg { flex-shrink: 0; width: 20px; height: 20px; color: #0078D4; }
+        .link-row a { color: #0078D4; text-decoration: none; font-size: 14px; }
+        .link-row a:hover { text-decoration: underline; }
+
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: #1a1a1a;
+            color: white;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .step-title {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>แยกไฟล์ตามชื่อพนักงาน</h1>
+        <p class="subtitle">เลือกไฟล์ CSV แล้วกดปุ่ม จะได้ไฟล์ Excel แยกตามชื่อแต่ละคน</p>
+
+        <div class="security-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M9 12l2 2 4-4"/>
+            </svg>
+            ข้อมูลไม่ถูกส่งออกไปไหน ประมวลผลในเครื่องคุณเท่านั้น
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div class="section">
+            <div class="step-title"><span class="step-badge">1</span> เลือกไฟล์</div>
+            <div class="upload-area" id="uploadArea">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                </svg>
+                <p class="upload-text"><strong>กดเพื่อเลือกไฟล์</strong> หรือลากไฟล์มาวางตรงนี้</p>
+                <div class="file-name" id="fileName"></div>
+            </div>
+            <input type="file" id="fileInput" accept=".csv">
+        </div>
+
+        <hr class="divider">
+
+        <!-- Step 2: Email mapping -->
+        <div class="section">
+            <div class="step-title"><span class="step-badge">2</span> ใส่อีเมลพนักงาน</div>
+            <p class="help-text" id="emailHelpText">อัพโหลดไฟล์ CSV ก่อน จะแสดงรายชื่อพนักงานให้ใส่อีเมล</p>
+
+            <div class="email-mapping" id="emailMapping" style="display: none;">
+                <div class="email-mapping-header">
+                    <h4>รายชื่อพนักงาน</h4>
+                    <span class="email-mapping-count" id="emailMappingCount"></span>
+                </div>
+                <div class="email-list" id="emailList"></div>
+                <p class="help-text">อีเมลที่ใส่จะถูกบันทึกไว้ ครั้งหน้าไม่ต้องใส่ใหม่</p>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Step 3: Generate -->
+        <div class="section">
+            <div class="step-title"><span class="step-badge">3</span> สร้างไฟล์</div>
+            <button class="btn" id="splitBtn" disabled>แยกไฟล์ Excel (แต่ละคน)</button>
+            <button class="btn btn-secondary" id="exportMailList" disabled>ดาวน์โหลดรายชื่อสำหรับ Power Automate</button>
+            <p class="help-text">ไฟล์ Power Automate จะมี: ชื่อพนักงาน, อีเมล, ชื่อไฟล์ Excel</p>
+        </div>
+
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">กำลังทำงาน...</div>
+        </div>
+
+        <div class="status" id="status"></div>
+        <div class="results" id="results"></div>
+
+        <hr class="divider">
+
+        <!-- Step 4: Upload to SharePoint -->
+        <div class="section">
+            <div class="step-title"><span class="step-badge">4</span> อัพโหลดไปยัง SharePoint</div>
+            <div class="link-row">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                </svg>
+                <a href="https://your-company.sharepoint.com" target="_blank" id="sharepointLink">เปิด SharePoint เพื่ออัพโหลดไฟล์</a>
+            </div>
+            <p class="help-text">อัพโหลดไฟล์ Excel ทั้งหมด + ไฟล์รายชื่อไปที่ SharePoint แล้วใช้ Power Automate ส่งอีเมลอัตโนมัติ</p>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const splitBtn = document.getElementById('splitBtn');
+        const exportMailList = document.getElementById('exportMailList');
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+        const fileName = document.getElementById('fileName');
+        const progress = document.getElementById('progress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const emailMapping = document.getElementById('emailMapping');
+        const emailList = document.getElementById('emailList');
+        const emailMappingCount = document.getElementById('emailMappingCount');
+        const emailHelpText = document.getElementById('emailHelpText');
+
+        let csvData = null;
+        let currentStaffNames = [];
+        let hasEmailColumn = false;
+        let emailColumnData = {};
+        let generatedFiles = []; // Track generated file names
+
+        // Load saved email mapping
+        function getEmailMapping() {
+            try {
+                return JSON.parse(localStorage.getItem('staffEmailMapping') || '{}');
+            } catch {
+                return {};
+            }
+        }
+
+        function saveEmailMapping(mapping) {
+            localStorage.setItem('staffEmailMapping', JSON.stringify(mapping));
+        }
+
+        // Render email list
+        function renderEmailList() {
+            if (currentStaffNames.length === 0) {
+                emailMapping.style.display = 'none';
+                emailHelpText.style.display = 'block';
+                emailHelpText.textContent = 'อัพโหลดไฟล์ CSV ก่อน จะแสดงรายชื่อพนักงานให้ใส่อีเมล';
+                return;
+            }
+
+            emailMapping.style.display = 'block';
+            emailHelpText.style.display = 'none';
+
+            const mapping = getEmailMapping();
+            let filledCount = 0;
+
+            let html = '';
+            currentStaffNames.forEach(name => {
+                const emailFromCSV = emailColumnData[name] || '';
+                const emailFromMapping = mapping[name] || '';
+                const email = emailFromCSV || emailFromMapping;
+
+                if (email) filledCount++;
+
+                const hasValue = email ? 'has-value' : '';
+                const statusIcon = email ? '✓' : '';
+                const readonly = emailFromCSV ? 'readonly' : '';
+                const placeholder = emailFromCSV ? '' : 'ใส่อีเมล...';
+
+                html += `
+                    <div class="email-row">
+                        <div class="email-row-name" title="${name}">${name}</div>
+                        <input type="email"
+                               class="email-row-input ${hasValue}"
+                               value="${email}"
+                               placeholder="${placeholder}"
+                               data-staff="${name}"
+                               ${readonly}>
+                        <div class="email-row-status">${statusIcon}</div>
+                    </div>
+                `;
+            });
+
+            emailList.innerHTML = html;
+            emailMappingCount.textContent = `${filledCount}/${currentStaffNames.length} มีอีเมล`;
+
+            // Add event listeners
+            emailList.querySelectorAll('.email-row-input').forEach(input => {
+                if (!input.hasAttribute('readonly')) {
+                    input.addEventListener('input', (e) => {
+                        const staffName = e.target.dataset.staff;
+                        const email = e.target.value.trim();
+                        const mapping = getEmailMapping();
+
+                        if (email) {
+                            mapping[staffName] = email;
+                            e.target.classList.add('has-value');
+                            e.target.nextElementSibling.textContent = '✓';
+                        } else {
+                            delete mapping[staffName];
+                            e.target.classList.remove('has-value');
+                            e.target.nextElementSibling.textContent = '';
+                        }
+
+                        saveEmailMapping(mapping);
+                        updateEmailCount();
+                    });
+                }
+            });
+        }
+
+        function updateEmailCount() {
+            const mapping = getEmailMapping();
+            let filledCount = 0;
+            currentStaffNames.forEach(name => {
+                if (emailColumnData[name] || mapping[name]) filledCount++;
+            });
+            emailMappingCount.textContent = `${filledCount}/${currentStaffNames.length} มีอีเมล`;
+        }
+
+        // File upload handling
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.toLowerCase().endsWith('.csv')) {
+                handleFile(file);
+            } else {
+                showStatus('กรุณาเลือกไฟล์ CSV เท่านั้น', 'error');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            fileName.textContent = file.name;
+            uploadArea.classList.add('has-file');
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                csvData = e.target.result;
+                splitBtn.disabled = false;
+                exportMailList.disabled = false;
+                showStatus(`พร้อมแยกไฟล์: ${file.name}`, 'info');
+
+                // Parse to get staff names
+                try {
+                    const rows = parseCSV(csvData);
+                    if (rows.length >= 2) {
+                        const headers = rows[0];
+                        const dataRows = rows.slice(1);
+
+                        const staffColIndex = headers.findIndex(h => h.toLowerCase().trim() === 'staff');
+                        const emailColIndex = headers.findIndex(h => h.toLowerCase().trim() === 'email');
+
+                        hasEmailColumn = emailColIndex !== -1;
+                        emailColumnData = {};
+
+                        if (staffColIndex !== -1) {
+                            const staffSet = new Set();
+                            dataRows.forEach(row => {
+                                const staffName = (row[staffColIndex] || '').toString().trim();
+                                if (staffName) {
+                                    staffSet.add(staffName);
+                                    if (hasEmailColumn && row[emailColIndex]) {
+                                        emailColumnData[staffName] = row[emailColIndex].toString().trim();
+                                    }
+                                }
+                            });
+                            currentStaffNames = Array.from(staffSet).sort();
+
+                            if (hasEmailColumn) {
+                                emailHelpText.textContent = 'พบคอลัมน์ email ในไฟล์ ใช้อีเมลจากไฟล์อัตโนมัติ';
+                                emailHelpText.style.display = 'block';
+                            }
+
+                            renderEmailList();
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Split into individual Excel files
+        splitBtn.addEventListener('click', async () => {
+            if (!csvData) return;
+
+            splitBtn.disabled = true;
+            results.innerHTML = '';
+            progress.classList.add('show');
+            progressFill.style.width = '0%';
+            generatedFiles = [];
+
+            try {
+                const rows = parseCSV(csvData);
+                if (rows.length < 2) {
+                    showStatus('ไฟล์ว่างเปล่าหรือไม่มีข้อมูล', 'error');
+                    progress.classList.remove('show');
+                    splitBtn.disabled = false;
+                    return;
+                }
+
+                const headers = rows[0];
+                const dataRows = rows.slice(1);
+                const staffColIndex = headers.findIndex(h => h.toLowerCase().trim() === 'staff');
+
+                if (staffColIndex === -1) {
+                    showStatus('ไม่พบคอลัมน์ "staff" ในไฟล์', 'error');
+                    progress.classList.remove('show');
+                    splitBtn.disabled = false;
+                    return;
+                }
+
+                const staffGroups = {};
+                dataRows.forEach(row => {
+                    const staffName = (row[staffColIndex] || 'ไม่ระบุชื่อ').toString().trim();
+                    if (staffName) {
+                        if (!staffGroups[staffName]) staffGroups[staffName] = [];
+                        staffGroups[staffName].push(row);
+                    }
+                });
+
+                const staffNames = Object.keys(staffGroups);
+                const total = staffNames.length;
+
+                if (total === 0) {
+                    showStatus('ไม่พบข้อมูลพนักงานในไฟล์', 'error');
+                    progress.classList.remove('show');
+                    splitBtn.disabled = false;
+                    return;
+                }
+
+                const createdFiles = [];
+
+                for (let i = 0; i < staffNames.length; i++) {
+                    const staffName = staffNames[i];
+                    const staffRows = staffGroups[staffName];
+
+                    progressFill.style.width = ((i + 1) / total * 100) + '%';
+                    progressText.textContent = `กำลังสร้างไฟล์ ${i + 1} จาก ${total}: ${staffName}`;
+
+                    const wb = XLSX.utils.book_new();
+                    const wsData = [headers, ...staffRows];
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+                    const colWidths = headers.map((h, idx) => {
+                        const maxLen = Math.max(h.length, ...staffRows.map(row => (row[idx] || '').toString().length));
+                        return { wch: Math.min(maxLen + 2, 50) };
+                    });
+                    ws['!cols'] = colWidths;
+
+                    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+
+                    const safeStaffName = staffName.replace(/[^a-zA-Z0-9\u0E00-\u0E7F]/g, '_');
+                    const outputFileName = `${safeStaffName}.xlsx`;
+
+                    XLSX.writeFile(wb, outputFileName);
+                    createdFiles.push({ name: staffName, rows: staffRows.length, file: outputFileName });
+                    generatedFiles.push({ staffName, fileName: outputFileName });
+
+                    // Small delay between downloads
+                    if (i < staffNames.length - 1) {
+                        await new Promise(r => setTimeout(r, 200));
+                    }
+                }
+
+                progress.classList.remove('show');
+                showStatus(`ดาวน์โหลดสำเร็จ! ${createdFiles.length} ไฟล์`, 'success');
+
+                results.innerHTML = '<h3>ไฟล์ที่สร้าง</h3><ul>' +
+                    createdFiles.map(f => `<li>${f.name} — ${f.rows} รายการ</li>`).join('') +
+                    '</ul>';
+
+            } catch (error) {
+                showStatus('เกิดข้อผิดพลาด: ' + error.message, 'error');
+                console.error(error);
+                progress.classList.remove('show');
+            }
+
+            splitBtn.disabled = false;
+        });
+
+        // Export mail list for Power Automate
+        exportMailList.addEventListener('click', () => {
+            const mapping = getEmailMapping();
+            const mailData = [];
+
+            // Header row for Power Automate
+            mailData.push(['staff_name', 'email', 'file_name', 'subject', 'body']);
+
+            currentStaffNames.forEach(name => {
+                const email = emailColumnData[name] || mapping[name] || '';
+                const safeStaffName = name.replace(/[^a-zA-Z0-9\u0E00-\u0E7F]/g, '_');
+                const fileName = `${safeStaffName}.xlsx`;
+
+                mailData.push([
+                    name,
+                    email,
+                    fileName,
+                    'รายงานประจำเดือน',
+                    `สวัสดีคุณ ${name}\n\nส่งไฟล์รายงานมาให้ตามแนบค่ะ/ครับ\n\nขอบคุณค่ะ/ครับ`
+                ]);
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(mailData);
+
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 25 },  // staff_name
+                { wch: 35 },  // email
+                { wch: 30 },  // file_name
+                { wch: 25 },  // subject
+                { wch: 60 }   // body
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'MailList');
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            XLSX.writeFile(wb, `power_automate_mail_list_${timestamp}.xlsx`);
+
+            showStatus('ดาวน์โหลดไฟล์รายชื่อสำหรับ Power Automate แล้ว', 'success');
+        });
+
+        function parseCSV(text) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let insideQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+
+                if (insideQuotes) {
+                    if (char === '"' && nextChar === '"') {
+                        currentCell += '"';
+                        i++;
+                    } else if (char === '"') {
+                        insideQuotes = false;
+                    } else {
+                        currentCell += char;
+                    }
+                } else {
+                    if (char === '"') {
+                        insideQuotes = true;
+                    } else if (char === ',') {
+                        currentRow.push(currentCell.trim());
+                        currentCell = '';
+                    } else if (char === '\n' || (char === '\r' && nextChar === '\n')) {
+                        currentRow.push(currentCell.trim());
+                        if (currentRow.some(cell => cell !== '')) rows.push(currentRow);
+                        currentRow = [];
+                        currentCell = '';
+                        if (char === '\r') i++;
+                    } else if (char !== '\r') {
+                        currentCell += char;
+                    }
+                }
+            }
+
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                if (currentRow.some(cell => cell !== '')) rows.push(currentRow);
+            }
+
+            return rows;
+        }
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+    </script>
+</body>
+</html>
